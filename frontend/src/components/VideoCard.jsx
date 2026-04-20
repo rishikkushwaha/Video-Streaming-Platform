@@ -21,7 +21,7 @@ function timeAgo(dateStr) {
   return `${months}mo ago`;
 }
 
-export default function VideoCard({ video }) {
+export default function VideoCard({ video, compact }) {
   const thumbnailUrl = video.thumbnailFilename
     ? videosAPI.getThumbnailUrl(video.thumbnailFilename)
     : null;
@@ -31,7 +31,7 @@ export default function VideoCard({ video }) {
     : '??';
 
   return (
-    <Link to={`/watch/${video._id}`} className="video-card" id={`video-card-${video._id}`}>
+    <Link to={`/watch/${video._id}`} className={`video-card ${compact ? 'video-card-compact' : ''}`} id={`video-card-${video._id}`}>
       <div className="video-card-thumbnail">
         {thumbnailUrl ? (
           <img src={thumbnailUrl} alt={video.title} loading="lazy" />
@@ -55,9 +55,11 @@ export default function VideoCard({ video }) {
       </div>
 
       <div className="video-card-info">
-        <div className="video-card-avatar">
-          {initials}
-        </div>
+        {!compact && (
+          <div className="video-card-avatar">
+            {initials}
+          </div>
+        )}
         <div className="video-card-meta">
           <h3 className="video-card-title">{video.title}</h3>
           <p className="video-card-channel">{video.uploader?.username || 'Unknown'}</p>

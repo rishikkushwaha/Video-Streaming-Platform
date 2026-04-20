@@ -13,6 +13,10 @@ import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import VerifyEmail from './pages/VerifyEmail';
+import Channel from './pages/Channel';
+import WatchLater from './pages/WatchLater';
+import History from './pages/History';
 
 function AppLayout() {
   const { sidebarCollapsed } = useLayout();
@@ -35,6 +39,10 @@ function AppLayout() {
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/channel/:id" element={<Channel />} />
+          <Route path="/watch-later" element={<WatchLater />} />
+          <Route path="/history" element={<History />} />
         </Routes>
         <Footer />
       </main>

@@ -28,16 +28,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationCode: String,
+    verificationExpires: Date,
   },
   { timestamps: true }
 );
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Compare password method

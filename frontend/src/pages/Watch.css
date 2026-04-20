@@ -134,3 +134,39 @@
   .video-title { font-size: 1.15rem; }
   .video-actions { flex-direction: column; align-items: flex-start; }
 }
+
+/* -------------------------------------
+   Plyr Video Player Customizations
+-------------------------------------- */
+:root {
+  --plyr-color-main: var(--primary); /* Red/Accent color for the time bar */
+}
+
+/* Make the Time Bar thicker and neat */
+.plyr__progress input[type=range] {
+  height: 6px !important;
+  cursor: pointer;
+}
+
+/* Better Horizontal Volume Bar */
+.plyr__volume {
+  margin-left: 14px;
+}
+.plyr__volume input[type=range] {
+  width: 70px !important;
+  height: 4px !important;
+  cursor: pointer;
+  transition: width 0.2s ease;
+}
+.plyr__volume:hover input[type=range] {
+  width: 85px !important;
+}
+
+/* Force volume bar to have a different color than the primary time bar */
+.plyr--video .plyr__volume input[type=range] {
+  --plyr-color-main: #10b981; /* Emerald green for volume */
+}
+
+.plyr__controls {
+  padding-top: 24px !important; /* give breathing room between time bar and controls */
+}

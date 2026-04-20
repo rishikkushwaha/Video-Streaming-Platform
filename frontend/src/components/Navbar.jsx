@@ -18,6 +18,8 @@ import {
   Settings,
   HelpCircle,
   Shield,
+  Bookmark,
+  History,
 } from 'lucide-react';
 import { useState } from 'react';
 import './Navbar.css';
@@ -139,6 +141,14 @@ export default function Navbar() {
                 <Link to="/dashboard" className={`sidebar-link ${isActive('/dashboard') ? 'active' : ''}`} id="nav-dashboard" title="Dashboard">
                   <LayoutDashboard size={20} />
                   <span className="sidebar-label">Dashboard</span>
+                </Link>
+                <Link to="/watch-later" className={`sidebar-link ${isActive('/watch-later') ? 'active' : ''}`} id="nav-watch-later" title="Watch Later">
+                  <Bookmark size={20} />
+                  <span className="sidebar-label">Watch Later</span>
+                </Link>
+                <Link to="/history" className={`sidebar-link ${isActive('/history') ? 'active' : ''}`} id="nav-history" title="History">
+                  <History size={20} />
+                  <span className="sidebar-label">History</span>
                 </Link>
                 <Link to="/upload" className={`sidebar-link ${isActive('/upload') ? 'active' : ''}`} id="nav-upload" title="Upload">
                   <Upload size={20} />

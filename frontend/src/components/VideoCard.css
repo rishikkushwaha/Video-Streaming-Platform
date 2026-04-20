@@ -144,3 +144,57 @@
   align-items: center;
   gap: 4px;
 }
+
+/* Compact Mode (for sidebars) */
+.video-card-compact {
+  flex-direction: row;
+  height: 94px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  gap: 12px;
+}
+
+.video-card-compact:hover {
+  transform: scale(1.02);
+  border-color: transparent;
+  box-shadow: none;
+  background: var(--bg-tertiary);
+}
+
+.video-card-compact .video-card-thumbnail {
+  width: 168px;
+  height: 94px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.video-card-compact .video-card-info {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.video-card-compact .video-card-title {
+  font-size: 0.9rem;
+  line-height: 1.25;
+  margin-bottom: 2px;
+}
+
+.video-card-compact .video-card-channel {
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+
+.video-card-compact .video-card-stats {
+  font-size: 0.7rem;
+  gap: 8px;
+}
+
+.video-card-compact .play-icon {
+  width: 32px;
+  height: 32px;
+}
+

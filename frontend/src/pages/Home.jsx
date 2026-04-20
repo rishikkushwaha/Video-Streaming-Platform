@@ -71,12 +71,14 @@ export default function Home() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
+  const initialSort = searchParams.get('sort') || 'latest';
+  const [sortBy, setSortBy] = useState(initialSort);
 
   useEffect(() => {
     fetchVideos();
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, sortBy]);
 
   const fetchVideos = async () => {
     setLoading(true);
@@ -84,6 +86,7 @@ export default function Home() {
       const params = {};
       if (activeCategory !== 'All') params.category = activeCategory;
       if (searchQuery) params.search = searchQuery;
+      if (sortBy) params.sort = sortBy;
       const res = await videosAPI.getAll(params);
       setVideos(res.data);
     } catch (err) {
@@ -93,12 +96,7 @@ export default function Home() {
     }
   };
 
-  // Group videos by category for carousel rows
-  const trendingVideos = [...videos].sort((a, b) => b.views - a.views).slice(0, 10);
-  const latestVideos = [...videos].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
-  const topLiked = [...videos].sort((a, b) => b.likes - a.likes).slice(0, 10);
 
-  const showCarousels = !searchQuery && activeCategory === 'All' && videos.length > 0;
 
   return (
     <div className="page-content">
@@ -164,18 +162,50 @@ export default function Home() {
           </div>
         )}
 
-        {/* Category Pills */}
-        <div className="category-bar" id="category-bar">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              className={`category-chip ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
-              id={`cat-${cat.toLowerCase()}`}
+        <div className="category-bar" id="category-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                className={`category-chip ${activeCategory === cat ? 'active' : ''}`}
+                onClick={() => setActiveCategory(cat)}
+                id={`cat-${cat.toLowerCase()}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          
+          <div className="sort-dropdown" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Sort by:</span>
+            <select 
+              value={sortBy} 
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                if (e.target.value === 'latest') {
+                  searchParams.delete('sort');
+                } else {
+                  searchParams.set('sort', e.target.value);
+                }
+                setSearchParams(searchParams);
+              }}
+              style={{
+                background: 'var(--bg-secondary)',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
             >
-              {cat}
-            </button>
-          ))}
+              <option value="latest">Newest</option>
+              <option value="views">Most Viewed</option>
+              <option value="likes">Most Liked</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </div>
         </div>
 
         {/* Content */}
@@ -204,24 +234,6 @@ export default function Home() {
             <Link to="/upload" className="btn btn-primary" style={{ marginTop: 20 }}>
               Upload
             </Link>
-          </div>
-        ) : showCarousels ? (
-          <div className="carousel-section stagger-children">
-            <VideoRow
-              title="Trending Now"
-              icon={<Flame size={20} />}
-              videos={trendingVideos}
-            />
-            <VideoRow
-              title="Latest Uploads"
-              icon={<Sparkles size={20} />}
-              videos={latestVideos}
-            />
-            <VideoRow
-              title="Most Loved"
-              icon={<TrendingUp size={20} />}
-              videos={topLiked}
-            />
           </div>
         ) : (
           <div className="video-grid stagger-children" id="video-grid">

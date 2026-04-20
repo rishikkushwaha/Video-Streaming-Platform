@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Video = require('../models/Video');
+const Comment = require('../models/Comment');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -158,6 +159,46 @@ router.put('/:id/like', auth, async (req, res) => {
   }
 });
 
+// GET /api/videos/:id/comments - Get comments for a video
+router.get('/:id/comments', async (req, res) => {
+  try {
+    const comments = await Comment.find({ video: req.params.id })
+      .populate('user', 'username avatar')
+      .sort({ createdAt: -1 });
+    res.json(comments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/videos/:id/comments - Add a comment to a video
+router.post('/:id/comments', auth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ message: 'Comment text is required' });
+    }
+
+    const video = await Video.findById(req.params.id);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    const comment = new Comment({
+      text,
+      user: req.user.id,
+      video: req.params.id,
+    });
+
+    await comment.save();
+    await comment.populate('user', 'username avatar');
+
+    res.status(201).json(comment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // DELETE /api/videos/:id - Delete a video
 router.delete('/:id', auth, async (req, res) => {
   try {
@@ -179,6 +220,31 @@ router.delete('/:id', auth, async (req, res) => {
 
     await Video.findByIdAndDelete(req.params.id);
     res.json({ message: 'Video deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// PUT /api/videos/:id - Update video metadata
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    if (video.uploader.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to edit this video' });
+    }
+
+    const { title, description, category } = req.body;
+    
+    if (title) video.title = title;
+    if (description !== undefined) video.description = description;
+    if (category) video.category = category;
+
+    await video.save();
+    res.json(video);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { videosAPI } from '../api';
-import { User, Film, Eye, ThumbsUp, Trash2, Upload, Plus } from 'lucide-react';
+import { User, Film, Eye, ThumbsUp, Trash2, Upload, Plus, Edit2, Check, X } from 'lucide-react';
 import './Dashboard.css';
 
 function formatViews(n) {
@@ -16,6 +16,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingVideoId, setEditingVideoId] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', category: '' });
 
   useEffect(() => {
     if (!user) {
@@ -43,6 +45,27 @@ export default function Dashboard() {
       setVideos((prev) => prev.filter((v) => v._id !== videoId));
     } catch (err) {
       console.error('Delete failed:', err);
+    }
+  };
+
+  const startEditing = (video) => {
+    setEditingVideoId(video._id);
+    setEditForm({ title: video.title, description: video.description || '', category: video.category });
+  };
+
+  const cancelEditing = () => {
+    setEditingVideoId(null);
+    setEditForm({ title: '', description: '', category: '' });
+  };
+
+  const handleEditSave = async (videoId) => {
+    try {
+      const res = await videosAPI.updateVideo(videoId, editForm);
+      setVideos(prev => prev.map(v => v._id === videoId ? { ...v, ...res.data } : v));
+      setEditingVideoId(null);
+    } catch (err) {
+      console.error('Update failed:', err);
+      alert('Failed to update video');
     }
   };
 
@@ -117,23 +140,67 @@ export default function Dashboard() {
                       <div className="thumb-placeholder"><Film size={20} /></div>
                     )}
                   </Link>
-                  <div className="dash-video-info">
-                    <Link to={`/watch/${video._id}`} className="dash-video-title">
-                      {video.title}
-                    </Link>
-                    <div className="dash-video-meta">
-                      <span><Eye size={13} /> {formatViews(video.views)}</span>
-                      <span><ThumbsUp size={13} /> {formatViews(video.likes)}</span>
-                      <span className="badge badge-accent">{video.category}</span>
-                    </div>
+                  <div className="dash-video-info" style={{ flex: 1 }}>
+                    {editingVideoId === video._id ? (
+                      <div className="edit-video-form" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', paddingRight: '1rem' }}>
+                        <input 
+                          type="text" 
+                          value={editForm.title} 
+                          onChange={e => setEditForm({...editForm, title: e.target.value})} 
+                          className="input-field" 
+                          style={{ padding: '0.5rem' }} 
+                        />
+                        <select 
+                          value={editForm.category} 
+                          onChange={e => setEditForm({...editForm, category: e.target.value})}
+                          className="input-field"
+                          style={{ padding: '0.5rem' }}
+                        >
+                          <option value="Uncategorized">Uncategorized</option>
+                          <option value="Music">Music</option>
+                          <option value="Gaming">Gaming</option>
+                          <option value="Education">Education</option>
+                          <option value="Entertainment">Entertainment</option>
+                          <option value="Sports">Sports</option>
+                          <option value="News">News</option>
+                          <option value="Technology">Technology</option>
+                          <option value="Travel">Travel</option>
+                          <option value="Comedy">Comedy</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <>
+                        <Link to={`/watch/${video._id}`} className="dash-video-title">
+                          {video.title}
+                        </Link>
+                        <div className="dash-video-meta">
+                          <span><Eye size={13} /> {formatViews(video.views)}</span>
+                          <span><ThumbsUp size={13} /> {formatViews(video.likes)}</span>
+                          <span className="badge badge-accent">{video.category}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <button
-                    className="btn-icon dash-delete-btn"
-                    onClick={() => handleDelete(video._id)}
-                    title="Delete video"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  
+                  {editingVideoId === video._id ? (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-icon" onClick={() => handleEditSave(video._id)} title="Save" style={{ color: '#10b981' }}>
+                        <Check size={18} />
+                      </button>
+                      <button className="btn-icon dash-delete-btn" onClick={cancelEditing} title="Cancel">
+                        <X size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-icon" onClick={() => startEditing(video)} title="Edit video">
+                        <Edit2 size={16} />
+                      </button>
+                      <button className="btn-icon dash-delete-btn" onClick={() => handleDelete(video._id)} title="Delete video">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

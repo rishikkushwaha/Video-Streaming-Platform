@@ -41,8 +41,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const verifyEmail = async (code) => {
+    const res = await authAPI.verifyEmail({ code });
+    if (res.data.isVerified) {
+      setUser((prev) => ({ ...prev, isVerified: true }));
+    }
+    return res.data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, verifyEmail }}>
       {children}
     </AuthContext.Provider>
   );
