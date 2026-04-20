@@ -33,13 +33,18 @@ export const videosAPI = {
     }),
   incrementView: (id) => api.put(`/videos/${id}/view`),
   likeVideo: (id) => api.put(`/videos/${id}/like`),
+  getLikeStatus: (id) => api.get(`/videos/${id}/like-status`),
   updateVideo: (id, data) => api.put(`/videos/${id}`, data),
   deleteVideo: (id) => api.delete(`/videos/${id}`),
   getUserVideos: (userId) => api.get(`/videos/user/${userId}`),
-  getStreamUrl: (filename) => `${API_BASE}/videos/stream/${filename}`,
-  getThumbnailUrl: (filename) => `http://localhost:5000/uploads/thumbnails/${filename}`,
+  getStreamUrl: (filename) => filename?.startsWith('http') ? filename : `${API_BASE}/videos/stream/${filename}`,
+  getThumbnailUrl: (filename) => filename?.startsWith('http') ? filename : `http://localhost:5000/uploads/thumbnails/${filename}`,
   getComments: (id) => api.get(`/videos/${id}/comments`),
   addComment: (id, text) => api.post(`/videos/${id}/comments`, { text }),
+  editComment: (commentId, text) => api.put(`/videos/comments/${commentId}`, { text }),
+  deleteComment: (commentId) => api.delete(`/videos/comments/${commentId}`),
+  replyToComment: (commentId, text) => api.post(`/videos/comments/${commentId}/reply`, { text }),
+  likeComment: (commentId) => api.put(`/videos/comments/${commentId}/like`),
 };
 
 // Users API

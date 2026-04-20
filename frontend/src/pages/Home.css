@@ -6,15 +6,15 @@
 }
 
 .featured-banner {
-  background: linear-gradient(135deg, #F0FDFA, #E0F2FE, #ccfbf1, #e0e7ff);
-  background-size: 300% 300%;
-  animation: gradientShift 12s ease infinite;
+  background: var(--bg-tertiary);
+  background-image: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   margin: 0 24px 32px;
   padding: 48px 32px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(13, 148, 136, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .featured-banner::after {
@@ -106,7 +106,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--bg-glass);
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -324,7 +324,7 @@
 .info-section {
   margin-top: 60px;
   padding: 80px 0;
-  background: var(--bg-card);
+  background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
 }
 

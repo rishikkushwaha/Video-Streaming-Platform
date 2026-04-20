@@ -18,6 +18,19 @@ const commentSchema = new mongoose.Schema(
       ref: 'Video',
       required: true,
     },
+    likes: {
+      type: Number,
+      default: 0,
+    },
+    likedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    parentComment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
+    }
   },
   { timestamps: true }
 );

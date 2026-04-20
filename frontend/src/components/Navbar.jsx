@@ -20,8 +20,11 @@ import {
   Shield,
   Bookmark,
   History,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -29,6 +32,7 @@ export default function Navbar() {
   const { sidebarCollapsed, toggleSidebar } = useLayout();
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (e) => {
@@ -74,6 +78,14 @@ export default function Navbar() {
           </form>
 
           <div className="topbar-actions">
+            <button 
+              className="topbar-icon-btn theme-toggle" 
+              onClick={toggleTheme} 
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              id="theme-toggle"
+            >
+              {theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}
+            </button>
             {user ? (
               <>
                 <Link to="/upload" className="btn btn-primary btn-sm" id="upload-btn">

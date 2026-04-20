@@ -34,6 +34,10 @@ const videoSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    likedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
     category: {
       type: String,
       default: 'Uncategorized',
@@ -48,6 +52,13 @@ const videoSchema = new mongoose.Schema(
         'Technology',
         'Travel',
         'Comedy',
+        'Car',
+        'Adventure',
+        'Superhero',
+        'Nature',
+        'Urban',
+        'Cosmic',
+        'Forest',
       ],
     },
     duration: {

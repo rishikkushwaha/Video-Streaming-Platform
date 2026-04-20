@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { LayoutProvider, useLayout } from './context/LayoutContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from "./components/Footer";
 import ScrollToTop from './components/ScrollToTop';
@@ -53,12 +54,14 @@ function AppLayout() {
 function App() {
   return (
     <AuthProvider>
-      <LayoutProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <AppLayout />
-        </BrowserRouter>
-      </LayoutProvider>
+      <ThemeProvider>
+        <LayoutProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <AppLayout />
+          </BrowserRouter>
+        </LayoutProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

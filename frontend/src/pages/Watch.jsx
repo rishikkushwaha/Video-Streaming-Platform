@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { videosAPI, usersAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -14,9 +14,12 @@ import {
   MessageSquare,
   Send,
   Bookmark,
+  Maximize2,
+  Minimize2,
+  Square,
 } from 'lucide-react';
-import { Plyr } from 'plyr-react';
-import 'plyr-react/plyr.css';
+import Plyr from 'plyr';
+import 'plyr/dist/plyr.css';
 import './Watch.css';
 
 function formatDate(dateStr) {
@@ -39,17 +42,40 @@ export default function Watch() {
   const [video, setVideo] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [liking, setLiking] = useState(false);
   const [liked, setLiked] = useState(false);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [commenting, setCommenting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [replyText, setReplyText] = useState('');
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
   const hasViewed = useRef(false);
+  const playerRef = useRef(null);
+
+  const streamUrl = video ? videosAPI.getStreamUrl(video.filename) : '';
+  const uploaderInitials = (video?.uploader?.username || '??').substring(0, 2).toUpperCase();
 
   useEffect(() => {
-    hasViewed.current = false;
-    fetchVideo();
-  }, [id]);
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (e.key.toLowerCase() === 't') {
+        setIsTheaterMode(prev => !prev);
+      }
+      // Prevent space bar from scrolling the page
+      if (e.key === ' ' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        // If Plyr is not handling it globally, we can manually trigger play/pause here
+        const plyr = playerRef.current?.plyr;
+        if (plyr) plyr.togglePlay();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const fetchVideo = async () => {
     setLoading(true);
@@ -64,6 +90,11 @@ export default function Watch() {
         if (user) {
           usersAPI.addToHistory(id);
         }
+      }
+      
+      // Set initial liked status
+      if (user && res.data.likedBy) {
+        setLiked(res.data.likedBy.some(id => id.toString() === user.id));
       }
 
       // Fetch related videos (same category)
@@ -85,14 +116,70 @@ export default function Watch() {
     }
   };
 
+  useEffect(() => {
+    if (user && video) {
+      const isLiked = video.likedBy?.some(uid => uid.toString() === user.id);
+      setLiked(!!isLiked);
+    } else {
+      setLiked(false);
+    }
+  }, [user, video]);
+
+  useEffect(() => {
+    hasViewed.current = false;
+    fetchVideo();
+    window.scrollTo(0, 0);
+  }, [id, user]);
+
+
+  // Initialize Native Plyr
+  useEffect(() => {
+    if (!video || !playerRef.current) return;
+
+    // Use a local variable to track the player instance
+    let plyrInstance;
+    
+    try {
+      plyrInstance = new Plyr(playerRef.current, {
+        autoplay: true, // Autoplay enabled as requested
+        muted: true,    // Muted to ensure autoplay works across all browsers
+        controls: [
+          'play-large', 'play', 'progress', 'current-time', 
+          'mute', 'volume', 'captions', 'settings', 'pip', 'fullscreen'
+        ],
+        settings: ['captions', 'quality', 'speed'],
+        speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+        quality: { default: 1080, options: [1080] },
+        tooltips: { controls: true, seek: true },
+        keyboard: { focused: true, global: true },
+        displayDuration: true,
+        invertTime: false
+      });
+    } catch (err) {
+      console.error('Plyr Init Error:', err);
+    }
+
+    return () => {
+      if (plyrInstance) {
+        try {
+          plyrInstance.destroy();
+        } catch (err) {}
+      }
+    };
+  }, [video?._id]); // Only re-run when the video ID changes
+
+
   const handleLike = async () => {
-    if (!user || liked) return;
+    if (!user || liking) return;
+    setLiking(true);
     try {
       const res = await videosAPI.likeVideo(id);
       setVideo((prev) => ({ ...prev, likes: res.data.likes }));
-      setLiked(true);
+      setLiked(res.data.isLiked);
     } catch (err) {
       console.error('Like failed:', err);
+    } finally {
+      setLiking(false);
     }
   };
 
@@ -111,6 +198,51 @@ export default function Watch() {
     }
   };
 
+  const handleCommentDelete = async (commentId) => {
+    try {
+      await videosAPI.deleteComment(commentId);
+      setComments(prev => prev.filter(c => c._id !== commentId && c.parentComment !== commentId));
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
+  const handleCommentEdit = async (commentId) => {
+    if (!editText.trim()) return;
+    try {
+      await videosAPI.editComment(commentId, editText);
+      setComments(prev => prev.map(c => c._id === commentId ? { ...c, text: editText } : c));
+      setEditingCommentId(null);
+    } catch (err) {
+      console.error('Edit error:', err);
+    }
+  };
+
+  const handleReplySubmit = async (e, parentId) => {
+    e.preventDefault();
+    if (!user || !replyText.trim()) return;
+    try {
+      const res = await videosAPI.replyToComment(parentId, replyText);
+      setComments(prev => [res.data, ...prev]);
+      setReplyText('');
+      setReplyingToCommentId(null);
+    } catch (err) {
+      console.error('Reply error:', err);
+    }
+  };
+
+  const handleCommentLike = async (commentId) => {
+    if (!user) return;
+    try {
+      const res = await videosAPI.likeComment(commentId);
+      setComments(prev => prev.map(c => 
+        c._id === commentId ? { ...c, likes: res.data.likes, likedBy: res.data.isLiked ? [...(c.likedBy || []), user.id] : (c.likedBy || []).filter(id => id.toString() !== user.id) } : c
+      ));
+    } catch (err) {
+      console.error('Comment like error:', err);
+    }
+  };
+
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     alert('Link copied to clipboard!');
@@ -125,6 +257,7 @@ export default function Watch() {
       console.error('Bookmark failed:', err);
     }
   };
+
 
   if (loading) {
     return (
@@ -152,39 +285,33 @@ export default function Watch() {
     );
   }
 
-  const streamUrl = videosAPI.getStreamUrl(video.filename);
-  const uploaderInitials = video.uploader?.username?.substring(0, 2).toUpperCase() || '??';
 
   return (
-    <div className="page-content watch-page">
-      <div className="container">
-        <Link to="/" className="back-link" id="back-home">
-          <ArrowLeft size={18} />
-          Back to Home
-        </Link>
+    <div className={`page-content watch-page ${isTheaterMode ? 'theater-mode-active' : ''}`}>
+      <div className={isTheaterMode ? '' : 'container'}>
+        {!isTheaterMode && (
+          <Link to="/" className="back-link" id="back-home">
+            <ArrowLeft size={18} />
+            Back to Home
+          </Link>
+        )}
 
-        <div className="watch-layout">
+        <div className={`watch-layout ${isTheaterMode ? 'theater-mode' : ''}`}>
           {/* Main Video */}
           <div className="watch-main fade-in">
-            <div className="video-player-wrapper" id="video-player" style={{ borderRadius: '12px', overflow: 'hidden' }}>
-              <Plyr 
-                source={{
-                  type: 'video',
-                  title: video.title,
-                  sources: [
-                    { src: streamUrl, type: 'video/mp4' }
-                  ],
-                  poster: video.thumbnailFilename
-                    ? videosAPI.getThumbnailUrl(video.thumbnailFilename)
-                    : undefined
-                }}
-                options={{
-                  autoplay: true,
-                  controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'download', 'fullscreen'],
-                  settings: ['captions', 'speed', 'loop'],
-                  speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] }
-                }}
-              />
+            <div className="video-player-wrapper" id="video-player" style={{ borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+                <video 
+                  key={`${video._id}-${streamUrl}`} 
+                  ref={playerRef}
+                  className="plyr"
+                  playsInline
+                  controls
+                  muted
+                  autoPlay
+                  data-poster={video.thumbnailFilename ? videosAPI.getThumbnailUrl(video.thumbnailFilename) : ''}
+                >
+                  <source src={streamUrl} type="video/mp4" />
+                </video>
             </div>
 
             <div className="video-details">
@@ -209,18 +336,26 @@ export default function Watch() {
                   </span>
                 </div>
                 <div className="video-action-buttons">
-                  <button
-                    className={`btn btn-secondary btn-sm ${liked ? 'liked' : ''}`}
+                  <button 
+                    className={`action-btn like-btn ${liked ? 'active' : ''}`} 
                     onClick={handleLike}
-                    disabled={!user || liked}
+                    disabled={!user || liking}
                     id="like-btn"
                   >
-                    <ThumbsUp size={16} />
-                    {formatViews(video.likes)} {liked ? 'Liked' : 'Like'}
+                    <i className={`fas fa-thumbs-up ${liking ? 'fa-spin' : ''}`}></i>
+                    <span>{formatViews(video.likes)} {liked ? 'Liked' : 'Like'}</span>
                   </button>
-                  <button className="btn btn-secondary btn-sm" onClick={handleShare} id="share-btn">
+                  <button className="action-btn" onClick={handleShare} id="share-btn">
                     <Share2 size={16} />
-                    Share
+                    <span>Share</span>
+                  </button>
+                  <button 
+                    className={`action-btn ${isTheaterMode ? 'active' : ''}`}
+                    onClick={() => setIsTheaterMode(!isTheaterMode)}
+                    title="Theater Mode (t)"
+                  >
+                    {isTheaterMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    <span>Theater</span>
                   </button>
                   <button 
                     className={`btn btn-secondary btn-sm ${isBookmarked ? 'liked' : ''}`} 
@@ -260,7 +395,7 @@ export default function Watch() {
                 {user ? (
                   <form onSubmit={handleCommentSubmit} className="comment-form" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
                     <div className="channel-avatar" style={{ width: '40px', height: '40px', flexShrink: 0 }}>
-                      {user.username.substring(0, 2).toUpperCase()}
+                      {(user.username || '??').substring(0, 2).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
                       <input
@@ -284,19 +419,110 @@ export default function Watch() {
                 )}
 
                 <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {comments.map((comment) => (
-                    <div key={comment._id} className="comment-item" style={{ display: 'flex', gap: '1rem' }}>
-                      <div className="channel-avatar" style={{ width: '40px', height: '40px', flexShrink: 0 }}>
-                        {comment.user?.username?.substring(0, 2).toUpperCase() || '??'}
-                      </div>
-                      <div className="comment-content" style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                          <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{comment.user?.username || 'Unknown'}</span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            {formatDate(comment.createdAt)}
-                          </span>
+                  {comments.filter(c => !c.parentComment).map((comment) => (
+                    <div key={comment._id} className="comment-item-container">
+                      <div className="comment-item" style={{ display: 'flex', gap: '1rem' }}>
+                        <div className="channel-avatar" style={{ width: '40px', height: '40px', flexShrink: 0 }}>
+                          {(comment.user?.username || '??').substring(0, 2).toUpperCase()}
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.5' }}>{comment.text}</p>
+                        <div className="comment-content" style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{comment.user?.username || 'Unknown'}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              {formatDate(comment.createdAt)}
+                            </span>
+                          </div>
+                          
+                          {editingCommentId === comment._id ? (
+                            <div className="edit-form">
+                              <input 
+                                className="input-field"
+                                value={editText} 
+                                onChange={(e) => setEditText(e.target.value)} 
+                                autoFocus
+                              />
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                <button className="btn btn-primary btn-sm" onClick={() => handleCommentEdit(comment._id)}>Save</button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setEditingCommentId(null)}>Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.5' }}>{comment.text}</p>
+                          )}
+
+                          <div className="comment-actions" style={{ display: 'flex', gap: '16px', marginTop: '8px', alignItems: 'center' }}>
+                            <button 
+                              className={`comment-action-btn ${comment.likedBy?.some(id => id.toString() === user?.id) ? 'active' : ''}`}
+                              onClick={() => handleCommentLike(comment._id)}
+                            >
+                              <ThumbsUp size={14} />
+                              <span>{comment.likes || 0}</span>
+                            </button>
+                            <button className="comment-action-btn" onClick={() => {
+                              setReplyingToCommentId(comment._id);
+                              setReplyText('');
+                            }}>
+                              Reply
+                            </button>
+                            
+                            {user?.id === comment.user?._id && (
+                              <div style={{ display: 'flex', gap: '12px' }}>
+                                <button className="comment-action-btn" onClick={() => {
+                                  setEditingCommentId(comment._id);
+                                  setEditText(comment.text);
+                                }}>Edit</button>
+                                <button className="comment-action-btn" onClick={() => handleCommentDelete(comment._id)}>Delete</button>
+                              </div>
+                            )}
+                          </div>
+
+                          {replyingToCommentId === comment._id && (
+                            <form onSubmit={(e) => handleReplySubmit(e, comment._id)} className="reply-form" style={{ marginTop: '12px' }}>
+                              <input 
+                                className="input-field"
+                                placeholder="Write a reply..."
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                autoFocus
+                              />
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                <button type="submit" className="btn btn-primary btn-sm">Reply</button>
+                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReplyingToCommentId(null)}>Cancel</button>
+                              </div>
+                            </form>
+                          )}
+
+                          {/* Render Replies */}
+                          <div className="replies-list" style={{ marginTop: '12px', paddingLeft: '24px', borderLeft: '2px solid var(--border)' }}>
+                            {comments.filter(r => r.parentComment === comment._id).map(reply => (
+                              <div key={reply._id} className="comment-item" style={{ display: 'flex', gap: '1rem', marginTop: '12px' }}>
+                                <div className="channel-avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>
+                                  {(reply.user?.username || '??').substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="comment-content">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{reply.user?.username}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatDate(reply.createdAt)}</span>
+                                  </div>
+                                  <p style={{ margin: 0, fontSize: '0.9rem' }}>{reply.text}</p>
+                                  
+                                  <div className="comment-actions" style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                                    <button 
+                                      className={`comment-action-btn ${reply.likedBy?.some(id => id.toString() === user?.id) ? 'active' : ''}`}
+                                      onClick={() => handleCommentLike(reply._id)}
+                                    >
+                                      <ThumbsUp size={12} />
+                                      <span>{reply.likes || 0}</span>
+                                    </button>
+                                    {user?.id === reply.user?._id && (
+                                      <button className="comment-action-btn" style={{ fontSize: '0.75rem' }} onClick={() => handleCommentDelete(reply._id)}>Delete</button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -8,6 +8,69 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Comment Interaction Routes (Placed at top to avoid :id collisions)
+
+// PUT /api/videos/comments/:commentId - Edit a comment
+router.put('/comments/:commentId', auth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+    if (comment.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    comment.text = text;
+    await comment.save();
+    res.json(comment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// DELETE /api/videos/comments/:commentId - Delete a comment
+router.delete('/comments/:commentId', auth, async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+    if (comment.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    await Comment.deleteMany({ parentComment: req.params.commentId });
+    await Comment.findByIdAndDelete(req.params.commentId);
+    res.json({ message: 'Comment deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/videos/comments/:commentId/reply - Reply to a comment
+router.post('/comments/:commentId/reply', auth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const parentComment = await Comment.findById(req.params.commentId);
+    if (!parentComment) return res.status(404).json({ message: 'Parent not found' });
+    const reply = new Comment({ text, user: req.user.id, video: parentComment.video, parentComment: parentComment._id });
+    await reply.save();
+    res.status(201).json(await reply.populate('user', 'username avatar'));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// PUT /api/videos/comments/:commentId/like - Like a comment
+router.put('/comments/:commentId/like', auth, async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+    const isLiked = comment.likedBy.some(id => id.toString() === req.user.id);
+    const update = isLiked ? { $pull: { likedBy: req.user.id }, $inc: { likes: -1 } } : { $addToSet: { likedBy: req.user.id }, $inc: { likes: 1 } };
+    const updated = await Comment.findByIdAndUpdate(req.params.commentId, update, { new: true });
+    res.json({ likes: updated.likes, isLiked: !isLiked });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Ensure uploads directories exist
 const videoDir = path.join(__dirname, '..', 'uploads', 'videos');
 const thumbDir = path.join(__dirname, '..', 'uploads', 'thumbnails');
@@ -142,18 +205,45 @@ router.put('/:id/view', async (req, res) => {
   }
 });
 
-// PUT /api/videos/:id/like - Increment like count
+// PUT /api/videos/:id/like - Toggle like count
 router.put('/:id/like', auth, async (req, res) => {
   try {
-    const video = await Video.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { likes: 1 } },
-      { new: true }
-    );
+    const video = await Video.findById(req.params.id);
     if (!video) {
       return res.status(404).json({ message: 'Video not found' });
     }
-    res.json(video);
+
+    const userId = req.user.id;
+    const isLiked = video.likedBy.some(id => id.toString() === userId);
+
+    if (isLiked) {
+      // Atomic pull to remove like
+      await Video.findByIdAndUpdate(req.params.id, {
+        $pull: { likedBy: userId },
+        $inc: { likes: -1 }
+      });
+      res.json({ likes: Math.max(0, video.likes - 1), isLiked: false });
+    } else {
+      // Atomic addToSet to add like once
+      await Video.findByIdAndUpdate(req.params.id, {
+        $addToSet: { likedBy: userId },
+        $inc: { likes: 1 }
+      });
+      res.json({ likes: video.likes + 1, isLiked: true });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /api/videos/:id/like-status - Check if user liked the video
+router.get('/:id/like-status', auth, async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ message: 'Video not found' });
+    
+    const isLiked = video.likedBy.some(id => id.toString() === req.user.id);
+    res.json({ isLiked });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -191,13 +281,14 @@ router.post('/:id/comments', auth, async (req, res) => {
     });
 
     await comment.save();
-    await comment.populate('user', 'username avatar');
-
-    res.status(201).json(comment);
+    
+    const populatedComment = await comment.populate('user', 'username avatar');
+    res.status(201).json(populatedComment);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // DELETE /api/videos/:id - Delete a video
 router.delete('/:id', auth, async (req, res) => {
@@ -266,8 +357,13 @@ router.get('/stream/:filename', (req, res) => {
     const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunksize = end - start + 1;
 
+    if (start >= fileSize) {
+      res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
+      return;
+    }
+
+    const chunksize = end - start + 1;
     const file = fs.createReadStream(filePath, { start, end });
     const head = {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -275,8 +371,14 @@ router.get('/stream/:filename', (req, res) => {
       'Content-Length': chunksize,
       'Content-Type': 'video/mp4',
     };
+
     res.writeHead(206, head);
     file.pipe(res);
+    
+    file.on('error', (err) => {
+      console.error('Stream error:', err);
+      res.end();
+    });
   } else {
     const head = {
       'Content-Length': fileSize,

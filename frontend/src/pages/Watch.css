@@ -53,12 +53,39 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 20px;
+  gap: 8px;
+  align-items: center;
 }
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.action-btn.active {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.action-btn.active i {
+  color: var(--primary-color);
+}
+
 .video-stats-row { display: flex; gap: 20px; }
 .stat-item {
   display: inline-flex;
@@ -109,11 +136,15 @@
   background: var(--bg-tertiary);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease;
+}
+.video-description:hover {
+  background: var(--bg-card-hover);
 }
 .video-description p {
-  color: var(--text-secondary);
-  font-size: 0.92rem;
-  line-height: 1.7;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
@@ -135,38 +166,232 @@
   .video-actions { flex-direction: column; align-items: flex-start; }
 }
 
+
+
 /* -------------------------------------
-   Plyr Video Player Customizations
+   Plyr Video Player Customizations (YouTube Style)
 -------------------------------------- */
 :root {
-  --plyr-color-main: var(--primary); /* Red/Accent color for the time bar */
+  --plyr-color-main: #FF0000; /* YouTube Red */
+  --plyr-video-control-background-hover: rgba(255, 255, 255, 0.1);
+  --plyr-control-radius: 4px;
+  --plyr-video-controls-background: transparent;
+  --plyr-video-control-color: #fff;
+  --plyr-video-control-color-hover: #fff;
 }
 
-/* Make the Time Bar thicker and neat */
+/* Container for theater mode */
+.watch-layout.theater-mode {
+  grid-template-columns: 1fr;
+  max-width: 100%;
+  padding: 0;
+}
+
+.watch-layout.theater-mode .watch-main {
+  padding: 0;
+}
+
+.watch-layout.theater-mode .video-player-wrapper {
+  max-width: 100%;
+  border-radius: 0;
+  max-height: 80vh;
+}
+
+.watch-layout.theater-mode .container {
+  max-width: 100%;
+  padding: 0;
+}
+
+.watch-layout.theater-mode .video-details,
+.watch-layout.theater-mode .video-comments-section {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+
+/* Control bar styling */
+.plyr--video .plyr__controls {
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.85)) !important;
+  padding: 30px 20px 10px !important;
+  color: #fff;
+}
+
+.plyr__control {
+  padding: 8px !important;
+  border-radius: 50% !important;
+  transition: background 0.2s ease;
+}
+
+.plyr__control:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.plyr__control:active {
+  transform: scale(0.95);
+}
+
+/* Custom progress bar (YouTube style) */
+.plyr--video .plyr__progress__container {
+  padding: 0 !important;
+  margin-top: -3px;
+  position: absolute;
+  bottom: 100%;
+  left: 12px;
+  right: 12px;
+  width: calc(100% - 24px);
+  z-index: 10;
+}
+
 .plyr__progress input[type=range] {
-  height: 6px !important;
-  cursor: pointer;
+  height: 3px !important;
+  transition: height 0.15s ease;
+  background: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Better Horizontal Volume Bar */
+.plyr__progress:hover input[type=range] {
+  height: 5px !important;
+}
+
+/* Red Played Part */
+.plyr--video .plyr__progress__played {
+  color: #FF0000 !important;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+/* YouTube style scrubber */
+.plyr__progress input[type=range]::-webkit-slider-thumb {
+  transform: scale(0);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #FF0000 !important;
+  border: none !important;
+  width: 13px !important;
+  height: 13px !important;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.plyr__progress:hover input[type=range]::-webkit-slider-thumb {
+  transform: scale(1);
+}
+
+/* Settings Menu Polishing */
+.plyr--full-ui.plyr--video .plyr__control--overlaid {
+  background: rgba(255, 0, 0, 0.8) !important;
+}
+
+.plyr__menu__container {
+  background: rgba(28, 28, 28, 0.98) !important;
+  border-radius: 8px !important;
+  padding: 8px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.plyr__menu__container .plyr__control {
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  color: #fff !important;
+}
+
+.plyr__menu__container .plyr__control:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.plyr__menu__container .plyr__control[aria-checked=true]::before {
+  background: #FF0000 !important;
+}
+
 .plyr__volume {
-  margin-left: 14px;
+  max-width: 32px;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
 }
+
+.plyr__volume:hover {
+  max-width: 120px;
+}
+
 .plyr__volume input[type=range] {
-  width: 70px !important;
-  height: 4px !important;
-  cursor: pointer;
-  transition: width 0.2s ease;
+  width: 0 !important;
+  opacity: 0;
+  transition: width 0.3s ease, opacity 0.2s ease;
+  margin-left: 8px !important;
 }
+
 .plyr__volume:hover input[type=range] {
-  width: 85px !important;
+  width: 60px !important;
+  opacity: 1;
 }
 
-/* Force volume bar to have a different color than the primary time bar */
-.plyr--video .plyr__volume input[type=range] {
-  --plyr-color-main: #10b981; /* Emerald green for volume */
+.plyr__time {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 10px;
 }
 
-.plyr__controls {
-  padding-top: 24px !important; /* give breathing room between time bar and controls */
+/* Theater mode button positioning */
+.theater-mode-btn {
+  background: transparent;
+  color: white;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.theater-mode-btn:hover {
+  opacity: 1;
+}
+
+.comment-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.comment-action-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.comment-action-btn.active {
+  color: var(--primary-color);
+}
+
+.replies-list {
+  position: relative;
+}
+
+.edit-form .input-field,
+.reply-form .input-field {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-primary);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+.comment-item-container {
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.comment-item-container:hover {
+  background: rgba(255, 255, 255, 0.02);
 }

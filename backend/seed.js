@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
+const axios = require('axios');
 require('dotenv').config();
 
 const User = require('./models/User');
@@ -16,20 +16,25 @@ fs.mkdirSync(videoDir, { recursive: true });
 fs.mkdirSync(thumbDir, { recursive: true });
 
 // Helper to download files
-const downloadFile = (url, dest) => {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, (response) => {
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        resolve(true);
-      });
-    }).on('error', (err) => {
-      fs.unlink(dest, () => {});
-      reject(err);
+const downloadFile = async (url, dest) => {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
     });
-  });
+    const writer = fs.createWriteStream(dest);
+    response.data.pipe(writer);
+    return new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+  } catch (err) {
+    console.error(`Failed to download ${url}:`, err.message);
+  }
 };
 
 const seedDatabase = async () => {
@@ -56,47 +61,54 @@ const seedDatabase = async () => {
     
     const sampleData = [
       {
-        title: 'Big Buck Bunny (Sample)',
-        desc: 'This is a sample video uploaded automatically by the seed script to verify that video playback and uploads are working correctly.',
-        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        thumbUrl: 'https://picsum.photos/id/237/800/450',
-        cat: 'Entertainment'
+        title: 'Project Sentinel: The Superhero Awakening',
+        desc: 'A cinematic look at a young hero discovering their destiny. In a world on the brink, one symbol rises to inspire the masses.',
+        videoUrl: 'https://videos.pexels.com/video-files/9427863/9427863-uhd_1440_2560_24fps.mp4',
+        thumbUrl: 'https://images.pexels.com/photos/804475/pexels-photo-804475.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+        cat: 'Superhero'
       },
       {
-        title: 'Beautiful Nature Waterfall',
-        desc: 'A calming waterfall in the middle of a lush green forest.',
-        videoUrl: 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-        thumbUrl: 'https://picsum.photos/id/1015/800/450',
-        cat: 'Travel'
+        title: 'Serene Rhythms: Autumn Nature',
+        desc: 'Explore the peaceful beauty of autumn wild grass swaying in the breeze. A cinematic study of nature\'s serene movements.',
+        videoUrl: 'https://videos.pexels.com/video-files/35508463/15043219_2560_1440_60fps.mp4',
+        thumbUrl: 'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+        cat: 'Nature'
       },
       {
-        title: 'Abstract Digital Art',
-        desc: 'Satisfying abstract digital motion graphics.',
-        videoUrl: 'https://media.w3.org/2010/05/bunny/trailer.mp4',
-        thumbUrl: 'https://picsum.photos/id/1025/800/450',
-        cat: 'Technology'
+        title: 'Vintage Soul: The Classic Yellow Drive',
+        desc: 'A nostalgic journey with a classic vintage car. Witness the elegance and timeless engineering of a bygone automotive era.',
+        videoUrl: 'https://videos.pexels.com/video-files/31220504/13335328_2560_1440_24fps.mp4',
+        thumbUrl: 'https://images.pexels.com/photos/3311574/pexels-photo-3311574.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+        cat: 'Car'
       },
       {
-        title: 'Ocean Waves',
-        desc: 'Relaxing sounds and visuals of ocean waves hitting the beach at sunset.',
-        videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-        thumbUrl: 'https://picsum.photos/id/1050/800/450',
-        cat: 'Travel'
+        title: 'The Great Expedition: Alpine Trek',
+        desc: 'Join a team of explorers as they navigate the challenging terrain of the snow-capped Alps. A tale of human endurance and alpine beauty.',
+        videoUrl: 'https://videos.pexels.com/video-files/7010423/7010423-uhd_2560_1440_25fps.mp4',
+        thumbUrl: 'https://images.pexels.com/photos/235922/pexels-photo-235922.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+        cat: 'Adventure'
       },
       {
-        title: 'City Traffic Timelapse',
-        desc: 'Fast-paced city life and traffic captured in a beautiful timelapse.',
-        videoUrl: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
-        thumbUrl: 'https://picsum.photos/id/1069/800/450',
-        cat: 'News'
+        title: 'Cosmic Genesis: The Nebula Burst',
+        desc: 'A mesmerizing visual journey into the heart of a cosmic nebula. Witness the vibrant colors and explosive energy of the deep universe.',
+        videoUrl: 'https://videos.pexels.com/video-files/32750117/13961486_1920_1080_30fps.mp4',
+        thumbUrl: 'https://images.pexels.com/photos/2034892/pexels-photo-2034892.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+        cat: 'Cosmic'
+      },
+      {
+        title: 'Golden Hour: Whispering Forest',
+        desc: 'Discover the serene beauty of an ancient forest at sunset. A macro look at the sunlight filtering through the canopy, illuminating the forest sanctuary.',
+        videoUrl: 'https://videos.pexels.com/video-files/3881835/3881835-hd_1920_1080_25fps.mp4',
+        thumbUrl: 'https://images.pexels.com/photos/1547813/pexels-photo-1547813.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+        cat: 'Forest'
       }
     ];
 
     for (let i = 0; i < sampleData.length; i++) {
       const data = sampleData[i];
-      const videoFilename = `sample_video_${Date.now()}_${i}.mp4`;
-      const thumbFilename = `sample_thumb_${Date.now()}_${i}.jpg`;
-
+      const videoFilename = `sample_video_${i + 1}.mp4`;
+      const thumbFilename = `sample_thumb_${i + 1}.jpg`;
+      
       console.log(`Downloading video ${i+1}/${sampleData.length}: ${data.title}...`);
       await downloadFile(data.videoUrl, path.join(videoDir, videoFilename));
       await downloadFile(data.thumbUrl, path.join(thumbDir, thumbFilename));
@@ -108,14 +120,14 @@ const seedDatabase = async () => {
         thumbnailFilename: thumbFilename,
         uploader: testUser._id,
         category: data.cat,
-        views: Math.floor(Math.random() * 500) + 10,
-        likes: Math.floor(Math.random() * 100) + 1
+        views: Math.floor(Math.random() * 10000) + 1000,
+        likes: Math.floor(Math.random() * 500) + 50,
       });
       await video.save();
     }
     console.log('✅ All sample videos downloaded and inserted into database');
 
-    console.log('🎉 Seeding Complete! You can now start your frontend and backend.');
+    console.log('🎉 Seeding Complete!');
     process.exit(0);
 
   } catch (err) {

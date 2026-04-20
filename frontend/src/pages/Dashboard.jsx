@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { videosAPI } from '../api';
-import { User, Film, Eye, ThumbsUp, Trash2, Upload, Plus, Edit2, Check, X } from 'lucide-react';
+import { User, Film, Eye, ThumbsUp, Trash2, Upload, Plus, Edit2, Check, X, MessageSquare, Users, Settings, Share2, MoreVertical } from 'lucide-react';
 import './Dashboard.css';
 
 function formatViews(n) {
@@ -95,19 +95,36 @@ export default function Dashboard() {
         {/* Stats */}
         <div className="dash-stats fade-in" id="dash-stats">
           <div className="dash-stat-card">
-            <div className="dash-stat-icon"><Film size={22} /></div>
+            <div className="dash-stat-header">
+              <Film size={20} className="text-accent" />
+              <span className="dash-stat-label">Videos</span>
+            </div>
             <div className="dash-stat-value">{videos.length}</div>
-            <div className="dash-stat-label">Videos</div>
+            <div className="dash-stat-trend">+2 this month</div>
           </div>
           <div className="dash-stat-card">
-            <div className="dash-stat-icon"><Eye size={22} /></div>
+            <div className="dash-stat-header">
+              <Eye size={20} className="text-accent" />
+              <span className="dash-stat-label">Total Views</span>
+            </div>
             <div className="dash-stat-value">{formatViews(totalViews)}</div>
-            <div className="dash-stat-label">Views</div>
+            <div className="dash-stat-trend text-success">↑ 12% growth</div>
           </div>
           <div className="dash-stat-card">
-            <div className="dash-stat-icon"><ThumbsUp size={22} /></div>
+            <div className="dash-stat-header">
+              <ThumbsUp size={20} className="text-accent" />
+              <span className="dash-stat-label">Total Likes</span>
+            </div>
             <div className="dash-stat-value">{formatViews(totalLikes)}</div>
-            <div className="dash-stat-label">Likes</div>
+            <div className="dash-stat-trend">84% like ratio</div>
+          </div>
+          <div className="dash-stat-card">
+            <div className="dash-stat-header">
+              <Users size={20} className="text-accent" />
+              <span className="dash-stat-label">Subscribers</span>
+            </div>
+            <div className="dash-stat-value">1.2K</div>
+            <div className="dash-stat-trend text-success">↑ 45 this week</div>
           </div>
         </div>
 

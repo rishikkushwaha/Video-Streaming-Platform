@@ -50,8 +50,35 @@
 
   /* Spacing */
   --navbar-height: 60px;
-  --sidebar-width: 220px;
-  --sidebar-collapsed: 68px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 72px;
+}
+
+[data-theme='dark'] {
+  /* Colors - Dark Theme */
+  --bg-primary: #0F0F0F;
+  --bg-secondary: #1E1E1E;
+  --bg-tertiary: #2D2D2D;
+  --bg-card: #1E1E1E;
+  --bg-card-hover: #262626;
+  --bg-glass: rgba(15, 15, 15, 0.8);
+
+  --text-primary: #F1F1F1;
+  --text-secondary: #AAAAAA;
+  --text-muted: #717171;
+
+  --accent-primary: #2DD4BF;
+  --accent-primary-hover: #14B8A6;
+  --accent-secondary: #FB7185;
+  --accent-gradient: linear-gradient(135deg, #14B8A6, #0EA5E9);
+  --accent-gradient-hover: linear-gradient(135deg, #0D9488, #0284C7);
+
+  --border-color: #333333;
+  --border-hover: #444444;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* Reset */
@@ -78,6 +105,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Glowing Blobs */
