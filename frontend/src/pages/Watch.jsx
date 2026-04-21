@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { videosAPI, usersAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import VideoCard from '../components/VideoCard';
+import VideoPlayer from '../components/VideoPlayer';
 import {
   ThumbsUp,
   Eye,
@@ -18,8 +19,6 @@ import {
   Minimize2,
   Square,
 } from 'lucide-react';
-import Plyr from 'plyr';
-import 'plyr/dist/plyr.css';
 import './Watch.css';
 
 function formatDate(dateStr) {
@@ -54,7 +53,6 @@ export default function Watch() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
   const hasViewed = useRef(false);
-  const playerRef = useRef(null);
 
   const streamUrl = video ? videosAPI.getStreamUrl(video.filename) : '';
   const uploaderInitials = (video?.uploader?.username || '??').substring(0, 2).toUpperCase();
@@ -64,13 +62,6 @@ export default function Watch() {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
       if (e.key.toLowerCase() === 't') {
         setIsTheaterMode(prev => !prev);
-      }
-      // Prevent space bar from scrolling the page
-      if (e.key === ' ' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-        e.preventDefault();
-        // If Plyr is not handling it globally, we can manually trigger play/pause here
-        const plyr = playerRef.current?.plyr;
-        if (plyr) plyr.togglePlay();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -132,41 +123,6 @@ export default function Watch() {
   }, [id, user]);
 
 
-  // Initialize Native Plyr
-  useEffect(() => {
-    if (!video || !playerRef.current) return;
-
-    // Use a local variable to track the player instance
-    let plyrInstance;
-    
-    try {
-      plyrInstance = new Plyr(playerRef.current, {
-        autoplay: true, // Autoplay enabled as requested
-        muted: true,    // Muted to ensure autoplay works across all browsers
-        controls: [
-          'play-large', 'play', 'progress', 'current-time', 
-          'mute', 'volume', 'captions', 'settings', 'pip', 'fullscreen'
-        ],
-        settings: ['captions', 'quality', 'speed'],
-        speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
-        quality: { default: 1080, options: [1080] },
-        tooltips: { controls: true, seek: true },
-        keyboard: { focused: true, global: true },
-        displayDuration: true,
-        invertTime: false
-      });
-    } catch (err) {
-      console.error('Plyr Init Error:', err);
-    }
-
-    return () => {
-      if (plyrInstance) {
-        try {
-          plyrInstance.destroy();
-        } catch (err) {}
-      }
-    };
-  }, [video?._id]); // Only re-run when the video ID changes
 
 
   const handleLike = async () => {
@@ -299,20 +255,10 @@ export default function Watch() {
         <div className={`watch-layout ${isTheaterMode ? 'theater-mode' : ''}`}>
           {/* Main Video */}
           <div className="watch-main fade-in">
-            <div className="video-player-wrapper" id="video-player" style={{ borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
-                <video 
-                  key={`${video._id}-${streamUrl}`} 
-                  ref={playerRef}
-                  className="plyr"
-                  playsInline
-                  controls
-                  muted
-                  autoPlay
-                  data-poster={video.thumbnailFilename ? videosAPI.getThumbnailUrl(video.thumbnailFilename) : ''}
-                >
-                  <source src={streamUrl} type="video/mp4" />
-                </video>
-            </div>
+            <VideoPlayer 
+              src={streamUrl} 
+              poster={video.thumbnailFilename ? videosAPI.getThumbnailUrl(video.thumbnailFilename) : ''} 
+            />
 
             <div className="video-details">
               <div className="video-title-row">

@@ -365,11 +365,22 @@ router.get('/stream/:filename', (req, res) => {
 
     const chunksize = end - start + 1;
     const file = fs.createReadStream(filePath, { start, end });
+    const ext = path.extname(req.params.filename).toLowerCase();
+    const mimeTypes = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogg': 'video/ogg',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+    };
+    const contentType = mimeTypes[ext] || 'video/mp4';
+
     const head = {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
-      'Content-Type': 'video/mp4',
+      'Content-Type': contentType,
     };
 
     res.writeHead(206, head);
@@ -380,9 +391,20 @@ router.get('/stream/:filename', (req, res) => {
       res.end();
     });
   } else {
+    const ext = path.extname(req.params.filename).toLowerCase();
+    const mimeTypes = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogg': 'video/ogg',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+    };
+    const contentType = mimeTypes[ext] || 'video/mp4';
+
     const head = {
       'Content-Length': fileSize,
-      'Content-Type': 'video/mp4',
+      'Content-Type': contentType,
     };
     res.writeHead(200, head);
     fs.createReadStream(filePath).pipe(res);
